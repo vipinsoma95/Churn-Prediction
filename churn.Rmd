@@ -1,0 +1,179 @@
+---
+title: "Team Project - BA"
+author: "Team - Vipin Soma ,Yuhan Zhao,Nandan Kamat,Akhil Singh Thakur"
+date: "November 18, 2018"
+output: word_document
+---
+```{r}
+library("pROC")
+```
+
+```{r}
+data<-read.csv('Churn_Train.csv')
+data1<-read.csv('Churn_1.csv')
+
+```
+
+
+#checking the summary of the data#
+
+```{r}
+summary(data)
+
+```
+
+
+```{r}
+summary(data1)
+
+```
+
+#data cleaning#
+
+```{r}
+row.has.na <- apply(data[ , 6:19], 1, function(x){any(is.na(x))})
+sum(row.has.na)
+cleaning <- data[!row.has.na,]
+
+```
+
+```{r}
+row.has.na.1 <- apply(data1[ , 6:19], 1, function(x){any(is.na(x))})
+sum(row.has.na)
+cleaning1 <- data1[!row.has.na.1,]
+```
+
+
+```{r}
+cleaning$account_length<-abs(cleaning$account_length)
+cleaning$number_vmail_messages<-abs(cleaning$number_vmail_messages)
+
+```
+
+
+
+```{r}
+cleaning1$account_length<-abs(cleaning1$account_length)
+cleaning1$number_vmail_messages<-abs(cleaning1$number_vmail_messages)
+
+```
+
+_ replacing NA in account lenght with mean_
+```{r}
+cleaning_mean<-mean(cleaning$account_length,na.rm = TRUE)
+cleaning$account_length[is.na(cleaning$account_length)] = cleaning_mean
+```
+
+```{r}
+cleaning_mean1<-mean(cleaning1$account_length,na.rm = TRUE)
+cleaning1$account_length[is.na(cleaning1$account_length)] = cleaning_mean1
+```
+
+```{r}
+summary(cleaning)
+```
+```{r}
+head(cleaning1)
+```
+
+
+```{r}
+summary(cleaning1)
+
+```
+
+# Here there are no NA values#
+
+```{r}
+churn_data<- cleaning
+churn_data_predicted<- cleaning1
+levels(churn_data$churn)
+```
+
+#using 70% of data for Model creation#
+```{r}
+Model = glm(churn ~ account_length	+ area_code +	international_plan +	voice_mail_plan +	number_vmail_messages +	total_day_minutes +	total_day_calls +	total_day_charge +	total_eve_minutes +	total_eve_calls +	total_eve_charge +	total_night_minutes +	total_night_calls +	total_night_charge	+ total_intl_minutes +	total_intl_calls	+ total_intl_charge +	number_customer_service_calls, family = "binomial", data = churn_data)
+summary(Model)
+```
+_using 30% of data for Model creation_
+
+```{r}
+Model1 = glm(churn ~ international_plan +	voice_mail_plan +	total_day_charge  + number_customer_service_calls, family = "binomial", data = churn_data_predicted)
+summary(Model1)
+```
+
+#Using 70% of the data #
+```{r}
+#use churn_data2 in new data
+testing_values<-predict(Model, newdata = churn_data, type = 'response')
+head(churn_data$churn)
+head(testing_values)
+
+```
+
+```{r}
+testing_values = as.factor(testing_values > 0.2) 
+head(testing_values)
+```
+
+```{r}
+levels(testing_values) <- list(no = 'FALSE', yes = 'TRUE')
+table(Predicted = testing_values, True = churn_data$churn)
+```
+
+#using 30% of data for predicting values#
+```{r}
+Churn_Prob<-predict(Model1, newdata = churn_data_predicted, type = 'response')
+head(churn_data_predicted$churn)
+head(Churn_Prob)
+
+```
+ 
+```{r}
+Churn_Prob = as.factor(Churn_Prob >.2) 
+head(Churn_Prob)
+```
+
+```{r}
+levels(Churn_Prob) <- list(no = 'FALSE', yes = 'TRUE')
+table(Predicted = Churn_Prob, True = churn_data_predicted$churn)
+```
+```{r}
+roc(as.numeric(churn_data_predicted$churn),as.numeric(Churn_Prob))
+```
+
+```{r}
+plot(roc(as.numeric(churn_data_predicted$churn),as.numeric(Churn_Prob))
+)
+```
+
+##
+```{r}
+load('Customers_To_Predict.rdata')
+```
+
+# Predicting Customers_To_Predict File 
+
+```{r}
+Churn_Prob<-predict(Model1, newdata = Customers_To_Predict, type = 'response')
+```
+
+```{r}
+churn<-Churn_Prob
+```
+ 
+```{r}
+Churn_Prob = as.factor(Churn_Prob >.2) 
+```
+
+```{r}
+levels(Churn_Prob) <- list(no = 'FALSE', yes = 'TRUE')
+Churn_Prob = as.data.frame(Churn_Prob)
+churn <- cbind(churn,Churn_Prob)
+colnames(churn)<-c('Probability','Churn')
+
+```
+
+```{r}
+churn
+```
